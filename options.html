@@ -1,0 +1,52 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ChatGPT Prompt</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <aside>
+    <h2>提示语</h2>
+    <div class="items"></div>
+    <div class="initControl">
+      <button id="importJson">导入</button>
+      <button id="exportJson">导出</button>
+    </div>
+  </aside>
+  <div class="container">
+    <div class="header">
+      <h3 class="center">ChatGPT Prompt</h3>
+    </div>
+    <div class="center">
+      <textarea id="input"></textarea>
+      <div class="middle">
+        <button class="refresh-btn"></button>
+        <button class="btn btn-purple" id="start">开始</button>
+        <button class="btn btn-pink" id="modifyPrompt">修改提示语</button>
+      </div>
+      <textarea id="output"></textarea>
+    </div>
+  </div>
+  <div class="popup hide">
+    <div class="popup-container">
+      <h2 class="popup-title">确认操作</h2>
+      <p class="popup-message">你确定要添加或删除提示语吗？</p>
+      <div class="popup-buttons">
+        <button id="addBtn">添加</button>
+        <button id="deleteBtn">删除</button>
+      </div>
+    </div>
+  </div>
+  <div class="import hide">
+    <div class="popup-container">
+      <h2 class="popup-title">输入配置</h2>
+      <textarea id="getInit"></textarea>
+      <div class="popup-buttons">
+        <button id="importBtn">导入</button>
+      </div>
+    </div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
