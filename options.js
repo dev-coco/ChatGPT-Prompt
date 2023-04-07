@@ -36,9 +36,10 @@ refresh.addEventListener('click', setPrompt)
 
 // 添加提示语
 const addPrompt = async () => {
-  const promptList = await getStorage()
+  let promptList = await getStorage()
   const getName = prompt('为这个提示语起一个名字')
   if (!getName) return
+  if (!promptList) promptList = {}
   promptList[getName] = input.value
   chrome.storage.local.set({ promptList })
   setItem()
@@ -124,14 +125,31 @@ start.addEventListener('click', async function () {
       body: JSON.stringify(obj),
       method: 'POST',
     })
+    if (response.status === 403) {
+      output.value = 'token 失效了，请重新获取。'
+      return
+    }
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    let messageID = ''
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      if (decoder.decode(value).includes('data: [DONE]')) return
+      if (decoder.decode(value).includes('data: [DONE]')) {
+        await fetch(`https://chat.openai.com/backend-api/conversation/${messageID}`, {
+          headers: {
+            'content-type': 'application/json',
+            authorization: secretKey,
+          },
+          body: '{"is_visible":false}',
+          method: 'PATCH',
+        }).then(response => response.json())
+        return
+      }
       try {
-        output.value = JSON.parse(decoder.decode(value).replace(/^data: /g, '').split('\n')[0]).message.content.parts[0]
+        const json = JSON.parse(decoder.decode(value).replace(/^data: /g, '').split('\n')[0])
+        output.value = json.message.content.parts[0].trim()
+        messageID = json.conversation_id
       } catch {
         console.log(decoder.decode(value))
       } // End try catch
@@ -159,10 +177,18 @@ exportJson.addEventListener('click', async () => {
 // 解析配置
 importBtn.addEventListener('click', async () => {
   try {
-    const promptList = JSON.parse(getInit.value)
+    let promptList = {}
+    if (getInit.value !== 'clear') {
+      promptList = await getStorage()
+      for (const x of getInit.value.match(/.+/g)) {
+        const list = JSON.parse(x)
+        for (const i in list) promptList[i] = list[i]
+      }
+    }
     chrome.storage.local.set({ promptList })
     setItem()
     importInit.classList.toggle('hide')
+    getInit.value = ''
   } catch {
     alert('配置格式错误')
   }
@@ -170,7 +196,6 @@ importBtn.addEventListener('click', async () => {
 
 const cleanList = async () => {
   chrome.storage.local.get(['secretKey'], async ({ secretKey }) => {
-    let data = []
     const json = await fetch('https://chat.openai.com/backend-api/conversations?offset=0&limit=20', {
       headers: {
         'content-type': 'application/json',
@@ -179,7 +204,6 @@ const cleanList = async () => {
       method: 'GET',
     }).then(response => response.json())
     for (const item of json.items) {
-      data.push()
       const result = await fetch(`https://chat.openai.com/backend-api/conversation/${item.id}`, {
         headers: {
           'content-type': 'application/json',
@@ -192,3 +216,4 @@ const cleanList = async () => {
     }
   })
 }
+
