@@ -179,7 +179,7 @@ importBtn.addEventListener('click', async () => {
   try {
     let promptList = {}
     if (getInit.value !== 'clear') {
-      promptList = await getStorage()
+      promptList = await getStorage() || {}
       for (const x of getInit.value.match(/.+/g)) {
         const list = JSON.parse(x)
         for (const i in list) promptList[i] = list[i]
