@@ -1,4 +1,5 @@
 chrome.browserAction.onClicked.addListener(function() {
+  chrome.tabs.create({ 'url': 'https://chat.openai.com/chat' })
   chrome.tabs.create({ 'url': 'options.html' })
 })
 
@@ -13,6 +14,6 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     } catch {}
     return { requestHeaders: headers }
   },
-  { urls: ['https://chat.openai.com/backend-api/conversation'] },
+  { urls: ['https://chat.openai.com/*'] },
   ['blocking', 'requestHeaders']
 )

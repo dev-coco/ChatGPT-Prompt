@@ -96,7 +96,7 @@ start.addEventListener('click', async function () {
   output.value = '运行中，请等待...'
   const encoder = new TextEncoder()
   const bytes = encoder.encode(input.value)
-  if (bytes.length >= 3000) return output.value = '内容太长，请减少内容长度。'
+  if (bytes.length >= 5000) return output.value = '内容太长，请减少内容长度。'
 
   chrome.storage.local.get(['secretKey'], async ({ secretKey }) => {
     const obj = {
@@ -126,7 +126,7 @@ start.addEventListener('click', async function () {
       method: 'POST',
     })
     if (response.status === 403) {
-      output.value = 'token 失效了，请重新获取。'
+      output.value = 'token 失效了，请打开 ChatGPT 网页获取。'
       return
     }
     const reader = response.body.getReader()
@@ -193,27 +193,3 @@ importBtn.addEventListener('click', async () => {
     alert('配置格式错误')
   }
 })
-
-const cleanList = async () => {
-  chrome.storage.local.get(['secretKey'], async ({ secretKey }) => {
-    const json = await fetch('https://chat.openai.com/backend-api/conversations?offset=0&limit=20', {
-      headers: {
-        'content-type': 'application/json',
-        authorization: secretKey,
-      },
-      method: 'GET',
-    }).then(response => response.json())
-    for (const item of json.items) {
-      const result = await fetch(`https://chat.openai.com/backend-api/conversation/${item.id}`, {
-        headers: {
-          'content-type': 'application/json',
-          authorization: secretKey,
-        },
-        body: '{"is_visible":false}',
-        method: 'PATCH',
-      }).then(response => response.json())
-      console.log(result)
-    }
-  })
-}
-

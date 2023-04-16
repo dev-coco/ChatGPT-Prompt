@@ -3,7 +3,7 @@
   "name": "ChatGPT Prompt",
   "description": "自定义预设 ChatGPT 提示语",
   "author": "Raz1ner",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "browser_action": {
     "default_icon": "icon.png"
   },
