@@ -92,21 +92,12 @@ const uuid = () => {
   })
 }
 
-let status = true
-// 挂起等待
-const wait = () => new Promise((resolve, reject) => {
-  const retry = setInterval(() => {
-    if (status === false) {
-      clearInterval(retry)
-      resolve()
-      status = true
-    } else {
-      console.log('等待列队')
-    }
-  }, 1000)
-})
+start.addEventListener('click', async function () {
+  output.value = '运行中，请等待...'
+  const encoder = new TextEncoder()
+  const bytes = encoder.encode(input.value)
+  if (bytes.length >= 5000) return output.value = '内容太长，请减少内容长度。'
 
-const req = async (str, custom) => {
   chrome.storage.local.get(['secretKey'], async ({ secretKey }) => {
     const obj = {
       action: 'next',
@@ -117,7 +108,7 @@ const req = async (str, custom) => {
           role: 'user',
           content: {
             'content_type': 'text',
-            parts: [str]
+            parts: [input.value]
           }
         }
       ],
@@ -136,10 +127,7 @@ const req = async (str, custom) => {
     })
     if (response.status === 403) {
       output.value = 'token 失效了，请打开 ChatGPT 网页获取。'
-      return status = true
-    }
-    if (response.status === 429) {
-      return status = true
+      return
     }
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
@@ -156,67 +144,17 @@ const req = async (str, custom) => {
           body: '{"is_visible":false}',
           method: 'PATCH',
         }).then(response => response.json())
-        return status = false
+        return
       }
       try {
         const json = JSON.parse(decoder.decode(value).replace(/^data: /g, '').split('\n')[0])
-        output.value = (custom ? custom + '\n\n' : '') + json.message.content.parts[0].trim()
+        output.value = json.message.content.parts[0].trim()
         messageID = json.conversation_id
       } catch {
-        const result = decoder.decode(value)
-        if (result.includes('event: ping')) status = true
-        console.log()
+        console.log(decoder.decode(value))
       } // End try catch
     } // End whilte
   }) // End storage
-}
-
-// 获取自定义内容
-async function customContent (type) {
-  const url = await new Promise((resolve, reject) => {
-    chrome.storage.local.get('getScriptUrl', ({ getScriptUrl }) => {
-      resolve(getScriptUrl)
-    })
-  })
-  const body = new FormData()
-  body.append('type', type)
-  const text = await fetch(url, {
-    body,
-    method: 'POST'
-  }).then(response => response.text())
-  return text
-}
-
-start.addEventListener('click', async function () {
-  output.value = '运行中，请等待...'
-  const encoder = new TextEncoder()
-  const bytes = encoder.encode(input.value)
-  if (bytes.length >= 5000) return output.value = '内容太长，请减少内容长度。'
-  if (input.value.includes('---@@@---')) {
-    const content = input.value.split('---@@@---')
-    let question = ''
-    // 第一次请求
-    await req(content[0])
-    await wait()
-    // 记录需要问的问题
-    question = content[0].replace(/\n/g, '').match(/(?<=content：).+/g)[0]
-    const list = content[0].match(/(?<=\[').*?(?='\])/g)[0].split("','")
-    // 格式化
-    const getType = () => {
-      for (const x of list) {
-        try {
-          return output.value.match(new RegExp(x, 'gi'))[0]
-        } catch { }
-      } // End for of
-    } // End function
-    output.value += '\n请求中...'
-    // 根据类型获取自定义内容
-    const custom = await customContent(getType())
-    await req(`${content[1]}\n${custom}\n${question}`, custom)
-  } else {
-    await req(input.value)
-  }
-  
 })
 
 // 监听导入配置按钮
