@@ -27,7 +27,6 @@ const getStorage = () => {
 const setPrompt = async () => {
   const promptList = await getStorage()
   const menu = d.querySelector('.items input:checked')
-  console.log(menu.value)
   input.value = promptList[menu.value] + '\n'
 }
 
@@ -97,11 +96,9 @@ let status = true
 const wait = () => new Promise((resolve, reject) => {
   const retry = setInterval(() => {
     if (status === false) {
+      status = true
       clearInterval(retry)
       resolve()
-      status = true
-    } else {
-      console.log('等待列队')
     }
   }, 1000)
 })
@@ -146,7 +143,10 @@ const req = async (str, custom) => {
     let messageID = ''
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        status = false
+        break
+      }
       if (decoder.decode(value).includes('data: [DONE]')) {
         await fetch(`https://chat.openai.com/backend-api/conversation/${messageID}`, {
           headers: {
@@ -156,7 +156,6 @@ const req = async (str, custom) => {
           body: '{"is_visible":false}',
           method: 'PATCH',
         }).then(response => response.json())
-        return status = false
       }
       try {
         const json = JSON.parse(decoder.decode(value).replace(/^data: /g, '').split('\n')[0])
@@ -165,7 +164,6 @@ const req = async (str, custom) => {
       } catch {
         const result = decoder.decode(value)
         if (result.includes('event: ping')) status = true
-        console.log()
       } // End try catch
     } // End whilte
   }) // End storage
@@ -197,7 +195,9 @@ start.addEventListener('click', async function () {
     let question = ''
     // 第一次请求
     await req(content[0])
+    console.log(5, status)
     await wait()
+    console.log(6, status)
     // 记录需要问的问题
     question = content[0].replace(/\n/g, '').match(/(?<=content：).+/g)[0]
     const list = content[0].match(/(?<=\[').*?(?='\])/g)[0].split("','")
@@ -213,8 +213,11 @@ start.addEventListener('click', async function () {
     // 根据类型获取自定义内容
     const custom = await customContent(getType())
     await req(`${content[1]}\n${custom}\n${question}`, custom)
+    await wait()
+    console.log(7, status)
   } else {
     await req(input.value)
+    await wait()
   }
   
 })
