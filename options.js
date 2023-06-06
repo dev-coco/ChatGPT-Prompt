@@ -103,7 +103,10 @@ const wait = () => new Promise((resolve, reject) => {
   }, 1000)
 })
 
-const req = async (str, custom) => {
+let firstMessageID = ''
+const req = async (str, custom, continueAction) => {
+  if (!continueAction) firstMessageID = ''
+  const lastResult = output.value
   chrome.storage.local.get(['secretKey'], async ({ secretKey }) => {
     const obj = {
       action: 'next',
@@ -119,7 +122,7 @@ const req = async (str, custom) => {
         }
       ],
       parent_message_id: uuid(),
-      model: 'gpt-3.5-turbo-0301',
+      model: 'gpt-3.5-turbo',
       timezone_offset_min: 240
     }
     const response = await fetch('https://chat.openai.com/backend-api/conversation', {
@@ -128,7 +131,7 @@ const req = async (str, custom) => {
         'content-type': 'application/json',
         authorization: secretKey,
       },
-      body: JSON.stringify(obj),
+      body: JSON.stringify(continueAction || obj),
       method: 'POST',
     })
     if (response.status === 403) {
@@ -141,28 +144,53 @@ const req = async (str, custom) => {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let messageID = ''
+    let parentMessageID = ''
+    let progressStatus = ''
     while (true) {
       const { done, value } = await reader.read()
       if (done) {
         status = false
         break
       }
-      if (decoder.decode(value).includes('data: [DONE]')) {
-        await fetch(`https://chat.openai.com/backend-api/conversation/${messageID}`, {
-          headers: {
-            'content-type': 'application/json',
-            authorization: secretKey,
-          },
-          body: '{"is_visible":false}',
-          method: 'PATCH',
-        }).then(response => response.json())
+      const responseInfo = decoder.decode(value)
+      if (responseInfo.includes('data: [DONE]')) {
+        if (progressStatus === 'in_progress') {
+          const continueObj = {
+            action: 'continue',
+            conversation_id: messageID,
+            parent_message_id: parentMessageID,
+            model: 'gpt-4-mobile',
+            timezone_offset_min: 240,
+            history_and_training_disabled: false
+          }
+          await req('', '', continueObj) 
+        } else {
+          await fetch(`https://chat.openai.com/backend-api/conversation/${firstMessageID}`, {
+            headers: {
+              'content-type': 'application/json',
+              authorization: secretKey,
+            },
+            body: '{"is_visible":false}',
+            method: 'PATCH',
+          }).then(response => response.json())
+          return
+        }
       }
       try {
-        const json = JSON.parse(decoder.decode(value).replace(/^data: /g, '').split('\n')[0])
-        output.value = (custom ? custom + '\n\n' : '') + json.message.content.parts[0].trim()
+        const json = JSON.parse(responseInfo.replace(/^data: /g, '').split('\n')[0])
+        // console.log(json)
+        if (continueAction) {
+          output.value = lastResult + (custom ? custom + '\n\n' : '') + json.message.content.parts[0].trim()
+        } else {
+          output.value = (custom ? custom + '\n\n' : '') + json.message.content.parts[0].trim()
+        }
         messageID = json.conversation_id
+        if (!firstMessageID) firstMessageID = messageID
+        parentMessageID = json.message.id
+        progressStatus = json.message.status
+        // console.log('progressStatus', progressStatus)
       } catch {
-        const result = decoder.decode(value)
+        const result = responseInfo
         if (result.includes('event: ping')) status = true
       } // End try catch
     } // End whilte
