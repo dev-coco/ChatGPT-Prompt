@@ -47,6 +47,12 @@ h3 {
   text-align: center
 }
 
+.content {
+  flex-grow: 1;
+  justify-content: center;
+  height: calc(100% - 168px);
+}
+
 textarea {
   border: 1px solid #ced4da;
   outline: 0;
@@ -56,8 +62,10 @@ textarea {
   line-height: 1.5;
   resize: none;
   margin: 20px;
-  width: 700px;
-  height: 350px;
+  /* width: 700px; */
+  width: 70%;
+  height: 40%;
+  /* height: 350px; */
 }
 
 .btn {
@@ -207,6 +215,9 @@ textarea {
   position: absolute;
   top: 50%;
   left: 50%;
+  display: flex;
+  flex-direction: column;
+
 }
 
 .popup-title {
