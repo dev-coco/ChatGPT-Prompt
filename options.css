@@ -68,6 +68,11 @@ textarea {
   /* height: 350px; */
 }
 
+#getInit {
+  width: 480px;
+  height: 360px;
+}
+
 .btn {
   display: inline-block;
   margin: 6px;
